@@ -7,6 +7,9 @@ import org.junit.Test;
 
 import java.util.List;
 
+/**
+ * 使用Zookeeper原生Java API实现客户端
+ */
 public class ZkClient {
 
     //连接zookeeper集群地址及端口号

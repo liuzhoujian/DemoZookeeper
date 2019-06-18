@@ -19,11 +19,7 @@ public class ZKProvider {
 
     //1、获取连接
     public void getConnection() throws Exception {
-        zooKeeper = new ZooKeeper(connectString, sessionTimeout, new Watcher() {
-            public void process(WatchedEvent watchedEvent) {
-
-            }
-        });
+        zooKeeper = new ZooKeeper(connectString, sessionTimeout,null);
     }
 
     //2、注册服务器

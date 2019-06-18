@@ -1,0 +1,133 @@
+本地安装
+   第一步：将安装包上传到linux系统，解压
+   第二步：修改conf中的zoo_sample.cfg为zoo.cfg，在zookeeper目录下创建data/zkData文件夹，指定dataDir数据存放路径
+   第三步：本地启动  bin/zkServer.sh start
+               查看启动状态 bin/zkServer.sh status
+               停止zookeeper  bin/zkServer.sh stop
+
+集群安装
+     准备三台虚拟机，hadoop102, hadoop103, hadoop104
+     前提：安装好Java环境（jdk1.7）
+      
+    在本地安装的配置文件zoo.cfg的基础上添加：
+      server.A=B:C:D           A：服务器的编号   B标识IP地址，C：用于leader和follower的通信端口  D：用于选举机制的通信端口
+      server.1=hadoop102:2888:3888 
+      server.2=hadoop103:2888:3888
+      server.3=hadoop104:2888:3888
+    之后再data/zkData目录下，创建myid 里面内容设置为2，即服务器编号
+
+     同理在hadoop103和hadoop104上执行相同的操作
+
+
+数据结构
+     zookeeper数据模型类似于节点树，每一个节点称为“znode”,每个znode默认存储1M数据，每个znode都可以通过其路径唯一标识。
+
+znode类型：
+	临时节点（ephemeral）：客户端与服务器断开连接，创建的节点自己删除
+	持久节点（persistent）：客户端与服务器断开连接，创建的节点不会删除
+znode有四种形式的目录节点（默认是persistent）
+(1)持久化目录节点（PERSISTENT）
+    客户端与zookeeper断开连接后，该节点依旧存在。
+(2)持久化顺序编号目录节点（PERSISTENT_SEQUENTIAL）
+  客户端与zookeeper断开连接后，该节点依旧存在，只是zookeeper给该节点进行顺序编号。
+(3)临时目录节点（EPHEMERAL）
+ 客户端与zookeeper断开连接后，该节点被删除。
+(4)临时顺序编号目录节点（EPHEMERAL_SEQUENTIAL）
+客户端与zookeeper断开连接后，该节点被删除，只是zookeeper给该节点进行顺序编号。
+
+
+
+选举机制
+1）半数机制：集群中半数以上机器存活，集群可用。
+2）zookeeper虽然在配置文件中并没有指定master和slave.但是在zookeeper工作时会有一个节点作为leader，其他的为follower，leader是通过内部选举机制临时产生的。
+
+选举机制详解：
+       假如现在有三台zookeeper服务器，编号分别为1,2,3，首先开启编号为1的服务器，此时只有它一台设备启动了，它发出去的消息都没能得到响应，因此目前处于looking状态。
+       当编号为2的服务器启动时，它与编号为1的服务器进行通信，互相交换自己的选举结果，由于两者都没有历史数据，所以id值较大的服务器2胜出，由于只有3台设备，因此只要达到半数         2，就可以认定服务器编号为2的设备为leader，其他为follower。
+
+
+命令行操作：
+	查看所有节点： ls /          ls2  / (更详细)
+
+	创建普通节点： create path  data
+    	     	       create  /xiyou  "sunwukong"
+	获取节点值：get  path
+		   get /xiyou
+	创建临时节点：create   -e    /sanguo  "xiaoqiao"
+	  客户端退出临时节点会被删除
+
+	创建带序号节点：create -s  /xiyou/sunhouzi  "sunwukong"
+	
+	修改节点的值： set  path  data
+		        set /xiyou   "wujing"
+
+	节点的值变化监听：get  /xiyou   watch
+		在hadoop102上执行监听，在hadoop103上修改值（生效一次）
+		会出现如下提示
+			hadoop102>WatchedEvent state:SyncConnected type:NodeDataChanged path:/sanguo/simayi
+
+	
+	节点路径的变化：ls  path  watch
+		          ls  /sanguo  watch
+	在hadoop102上执行监听，在hadoop103上在/sanguo目录下新增一个节点，在hadoop102上观察效果（生效一次）
+	会出现如下提示：
+		hadoop102>WatchedEvent state:SyncConnected type:NodeChildrenChanged path:/sanguo
+
+
+	删除节点(子节点)：delete  /xiyou/bajie
+
+	递归删除节点： rmr  /xiyou
+
+	查看节点状态： stat  /sanguo
+
+
+
+
+
+
+
+
+Java代码操作
+maven工程导入依赖
+
+    原生Zookeeper JAVA API，使用起来不方便，默认watcher只注册一次，反复注册需人为设置
+   <dependencies>
+        <!-- https://mvnrepository.com/artifact/org.apache.zookeeper/zookeeper -->
+        <dependency>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+            <version>3.4.10</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>
+
+   ZKClient使用起来更方便，实现了watcher反复注册、session自动断线重连等
+<!-- https://mvnrepository.com/artifact/com.github.sgroschupf/zkclient -->
+<dependency>
+    <groupId>com.github.sgroschupf</groupId>
+    <artifactId>zkclient</artifactId>
+    <version>0.1</version>
+</dependency>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
