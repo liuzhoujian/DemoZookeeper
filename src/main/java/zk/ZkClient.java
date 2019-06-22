@@ -23,9 +23,17 @@ public class ZkClient {
     @Before
     public void initZk() throws Exception {
           zooKeeper = new ZooKeeper(connectString, sessionTimeout, new Watcher() {
-            public void process(WatchedEvent watchedEvent) {
+            public void process(WatchedEvent event) {
                 //监听发生后触发的事件
-                System.out.println(watchedEvent.getType() + "---" + watchedEvent.getPath());
+                if(event.getType() == Event.EventType.NodeDeleted) {
+                    System.out.println("node deleted");
+                } else if(event.getType() == Event.EventType.NodeChildrenChanged) {
+                    System.out.println("nodeChildrenChanged");
+                } else if(event.getType() == Event.EventType.NodeCreated) {
+                    System.out.println("node created");
+                } else if(event.getType() == Event.EventType.NodeDataChanged) {
+                    System.out.println("node data changed");
+                }
 
                 //再次注册事件进行监听
                 try {
@@ -50,6 +58,9 @@ public class ZkClient {
         //第四个参数：节点的类型
         String node = zooKeeper.create("/liuzhoujian", "movie.txt".getBytes(),
                 ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+
+      /*  String child = zooKeeper.create("/liuzhoujian/child", "movie.txt".getBytes(),
+                ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);*/
         System.out.println(node);
     }
 
@@ -60,6 +71,7 @@ public class ZkClient {
         for(String node : children) {
             System.out.println(node);
         }
+
         Thread.sleep(Long.MAX_VALUE);
     }
 
@@ -69,5 +81,17 @@ public class ZkClient {
         Stat stat = zooKeeper.exists("/liuzhoujian", true); //watch为true表示开启监听，默认只监听一次，需在process回调中再次配置
         System.out.println(stat == null ? "nost exist" : "exist");
         Thread.sleep(Long.MAX_VALUE);
+    }
+
+    //设置和获取数据
+    public void setAndGet() throws Exception {
+
+        //设置版本号为-1，如果匹配不到相应节点会抛出异常
+        zooKeeper.setData("/liuzhoujian", "hello".getBytes(), -1);
+
+        Stat stat = new Stat();
+        byte[] data = zooKeeper.getData("/liuzhoujian", false, stat);
+
+
     }
 }
